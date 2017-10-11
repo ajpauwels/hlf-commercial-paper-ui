@@ -1,0 +1,24 @@
+body {
+	padding-top: 70px;
+}
+
+h1.content-header {
+	margin-bottom: 40px;
+}
+
+.bottom-align-div {
+	vertical-align: bottom;
+}
+
+.table-with-button-header-text {
+	margin-right: 40px;
+}
+
+.button-glyphicon {
+	vertical-align: middle;
+	margin-right: 5px;
+}
+
+#issued-paper-table {
+	margin-bottom: 40px;
+}

@@ -1,0 +1,37 @@
+doctype html
+html
+	head
+		title Manage paper
+		include bootstrap-css.pug
+
+	body
+		include navbar.pug
+
+		div.container
+			div.row
+				div.well.col-sm-6.col-sm-offset-3
+					form(action="/paper/issue", method="POST").form-horizontal
+						include error-notifs.pug
+						fieldset
+							legend New issue
+							div.form-group
+								label(for="par").col-sm-2.control-label Par
+								div.col-sm-10
+									input(autocomplete="off", type="text", placeholder="Par", name="par").form-control#par
+							div.form-group
+								label(for="discount").col-sm-2.control-label Discount
+								div.col-sm-10
+									input(autocomplete="off", type="text", placeholder="Discount", name="discount").form-control#discount
+							div.form-group
+								label(for="quantity").col-sm-2.control-label Quantity
+								div.col-sm-10
+									input(autocomplete="off", type="text", placeholder="Quantity", name="quantity").form-control#quantity
+							div.form-group
+								label(for="maturity").col-sm-2.control-label Maturity
+								div.col-sm-10
+									input(autocomplete="off", type="text", placeholder="Maturity", name="maturity").form-control#maturity
+							div.form-group
+								div.col-sm-offset-2.col-sm-10
+									button(type="submit").btn.btn-primary Issue
+
+		include bootstrap-js.pug

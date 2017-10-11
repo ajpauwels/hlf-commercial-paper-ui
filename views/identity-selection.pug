@@ -1,0 +1,31 @@
+doctype html
+html
+	head
+		title= title
+		include bootstrap-css.pug
+
+	body
+		include navbar.pug
+
+		div.container
+			div.row
+				h1.content-header Select identity
+
+			include error-notifs.pug
+
+			div.row
+				if identities
+					each identity in identities
+						div.col-sm-4
+							div.panel.panel-success
+								div.panel-heading
+									h3.panel-title= identity.username
+								div.panel-body
+									form(action="/select/identity", method="POST").form-horizontal
+										input(type="hidden", name="identity-id", value=identity.id)
+										input(type="hidden", name="identity-name", value=identity.username)
+										input(type="hidden", name="identity-wallet", value=identity.walletID)
+										div.text-center
+											button(type="submit").btn.btn-success Select
+
+		include bootstrap-js.pug

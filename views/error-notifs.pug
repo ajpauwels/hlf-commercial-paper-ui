@@ -1,0 +1,5 @@
+if errors
+	each error in errors
+		div.alert.alert-dismissible.alert-danger
+			button(type="button", data-dismiss="alert").close &times;
+			p Error: #{error.msg}

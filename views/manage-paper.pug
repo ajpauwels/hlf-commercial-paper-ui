@@ -1,0 +1,60 @@
+doctype html
+html
+	head
+		title Manage paper
+		include bootstrap-css.pug
+
+	body
+		include navbar.pug
+
+		div.container
+			include error-notifs.pug
+
+			div.row#issued-paper-header
+				h1.content-header
+					span.table-with-button-header-text Issued paper
+					a(href="/paper/issue").btn.btn-success.pull-right
+						span.glyphicon.glyphicon-plus-sign.button-glyphicon
+						span.button-text Issue
+			div.row#issued-paper-table
+				table.table.table-striped.table-hover
+					thead
+						th CUSIP
+						th Par
+						th Discount
+						th #
+						th Maturity
+						th Issued
+					if issuedPapers.length > 0
+						tbody
+						each paper in issuedPapers
+							- var issuedDate = new Date(paper.issuedTimestamp)
+							- var issuedDateString = issuedDate.toDateString()
+							- var maturityDate = new Date()
+							- maturityDate.setDate(issuedDate.getDate() + paper.maturity)
+							- var maturityDateString = maturityDate.toDateString();
+							tr
+								td= paper.CUSIP
+								td= paper.par
+								td= paper.discount
+								td= paper.quantityIssued
+								td= maturityDateString + ' (' + paper.maturity + ' days)'
+								td= issuedDateString
+
+			div.row#owned-paper-header
+				h1.content-header
+					span.table-with-button-header-text Owned paper
+					a(href="/paper/purchase").btn.btn-success.pull-right
+						span.glyphicon.glyphicon-plus-sign.button-glyphicon
+						span.button-text Purchase
+			div.row#owned-paper-table
+				table.table.table-striped.table-hover
+					thead
+						th CUSIP
+						th Par
+						th Discount
+						th #
+						th Maturity
+						th Issued
+		
+		include bootstrap-js.pug

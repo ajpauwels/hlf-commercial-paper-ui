@@ -1,0 +1,39 @@
+doctype html
+html
+	head
+		title= title
+		include bootstrap-css.pug
+
+	body
+		include navbar.pug
+
+		div.container
+			if error
+				div.row
+					div.alert.alert-dismissible.alert-danger.col-lg-6.col-lg-offset-3
+						button(type="button", data-dismiss="alert").close &times;
+						p Error registering: #{error}
+			else if success
+				div.row
+					div.alert.alert-dismissible.alert-success.col-lg-6.col-lg-offset-3
+						button(type="button", data-dismiss="alert").close &times;
+						p Success!
+
+			div.row
+				div.well.col-lg-6.col-lg-offset-3
+					form(action="/register", method="POST").form-horizontal
+						fieldset
+							legend Register
+							div.form-group
+								label(for="input-email").col-lg-2.control-label Email
+								div.col-lg-10
+									input(autocomplete="off", type="text", placeholder="Email", name="email").form-control#input-email
+							div.form-group
+								label(for="input-password").col-lg-2.control-label Password
+								div.col-lg-10
+									input(autocomplete="off", type="password", placeholder="Password", name="password").form-control#input-password
+							div.form-group
+								div.col-lg-offset-2.col-lg-10
+									button(type="submit").btn.btn-primary Submit
+
+		include bootstrap-js.pug
