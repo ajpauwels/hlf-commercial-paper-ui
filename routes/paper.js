@@ -3,34 +3,31 @@ var router = express.Router();
 var rest = require('../rest-interface.js');
 var util = require('../util.js');
 
-function checkIdentitySelected(req) {
+function checkIdentitySelected(req, res, next) {
 	if (!req.session.defaultIdentity) {
-		var error = {
-			type: util.ERROR_TYPES.COMPOSER_REST_ERROR,
-			subtype: util.COMPOSER_REST_ERROR_TYPES.ENROLL,
-		};
-
-		return error;
-	}
-
-	return null;
-}
-
-router.get('/', (req, res, next) => {
-	rest.getAllIssuedPapers((getPapersReq, getPapersRes, getPapersErr) => {
-		var error = rest.handleErrors(getPapersReq, getPapersRes, getPapersErr);
-
-		if (error) {
-			error.renderPage = 'manage-paper';
-			error.renderPageData = {
-				identities: req.session.identities
-			};
-			return next(error);
+		var error = {};
+		if (!rest.serverConfig.token || rest.serverConfig.token.length == 0) {
+			error.type = util.ERROR_TYPES.COMPOSER_REST_ERROR;
+			error.subtype = util.COMPOSER_REST_ERROR_TYPES.AUTH;
+		} else {
+			error.type = util.ERROR_TYPES.COMPOSER_REST_ERROR;
+			error.subtype = util.COMPOSER_REST_ERROR_TYPES.ENROLL;
 		}
 
-		var noSelectedIdentityErr = checkIdentitySelected(req, res);
-		if (noSelectedIdentityErr) {
-			return next(noSelectedIdentityErr);
+		return next(error);
+	}
+
+	return next();
+}
+
+router.get('/', checkIdentitySelected, (req, res, next) => {
+	rest.getAllIssuedPapers((getPapersRes, getPapersErr) => {
+		if (getPapersErr) {
+			getPapersErr.renderPage = 'manage-paper';
+			getpapersErr.renderPageData = {
+				identities: req.session.identities
+			};
+			return next(getPapersErr);
 		}
 
 		var issuedPapers = util.filterPapersByIssuer(getPapersRes, req.session.defaultIdentity.company);
@@ -38,21 +35,11 @@ router.get('/', (req, res, next) => {
 	});
 });
 		
-router.get('/issue', (req, res, next) => {
-	var noSelectedIdentityErr = checkIdentitySelected(req);
-	if (noSelectedIdentityErr) {
-		return res.redirect('/paper');
-	}
-
+router.get('/issue', checkIdentitySelected, (req, res, next) => {
 	res.render('issue-paper');
 });
 
-router.post('/issue', (req, res, next) => {
-	var noSelectedIdentityErr = checkIdentitySelected(req);
-	if (noSelectedIdentityErr) {
-		return res.redirect('/paper');
-	}
-
+router.post('/issue', checkIdentitySelected, (req, res, next) => {
 	var parVal = parseFloat(req.body.par);
 	var quantVal = parseInt(req.body.quantity);
 	var discountVal = parseFloat(req.body.discount);
@@ -72,15 +59,24 @@ router.post('/issue', (req, res, next) => {
 		return next(error);
 	}
 
-	rest.issueNewPaper(parVal, quantVal, discountVal, maturityVal, req.session.defaultIdentity.company, (issueReq, issueRes, issueErr) => {
-		var error = rest.handleErrors(issueReq, issueRes, issueErr);
-
-		if (error) {
-			req.renderPage('issue-paper');
-			return next(error);
+	rest.issueNewPaper(parVal, quantVal, discountVal, maturityVal, req.session.defaultIdentity.company, (issueRes, issueErr) => {
+		if (issueErr) {
+			issueErr.renderPage = 'issue-paper';
+			return next(issueErr);
 		}
 
 		res.redirect('/paper');
+	});
+});
+
+router.get('/purchase', checkIdentitySelected, (req, res, next) => {
+	rest.getAllPurchaseablePaper(req.session.defaultIdentity.company, (getPapersRes, getPapersErr) => {
+		if (getPapersErr) {
+			getPapersErr.renderPage = 'purchase-paper';
+			return next(getPapersErr);
+		}
+
+		res.render('purchase-paper', { availablePapers: getPapersRes });
 	});
 });
 

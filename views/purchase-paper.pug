@@ -1,0 +1,54 @@
+doctype html
+html
+	head
+		title Purchase paper
+		include bootstrap-css.pug
+
+	body
+		include navbar.pug
+
+		div.container
+			include error-notifs.pug
+
+			div.row#available-paper-header
+				h1.content-header
+					span.table-with-button-header-text Available paper
+
+			div.row#available-paper-table
+				table.table.table-striped.table-hover
+					thead
+						th CUSIP
+						th Par
+						th Discount
+						th Cost per
+						th Issued
+						th Available
+						th Maturity
+						th Issued On
+						th 
+					if availablePapers.length > 0
+						tbody
+						each paper in availablePapers
+							- var issuedDate = new Date(paper.issuedTimestamp)
+							- var issuedDateString = issuedDate.toDateString()
+							- var maturityDate = new Date()
+							- maturityDate.setDate(issuedDate.getDate() + paper.maturity)
+							- var maturityDateString = maturityDate.toDateString();
+							tr
+								td.vert-aligned= paper.CUSIP
+								td.vert-aligned= '$' + paper.par
+								td.vert-aligned= (paper.discount * 100) + '%'
+								td.vert-aligned= '$' + (paper.par * (1 - paper.discount))
+								td.vert-aligned= paper.quantityIssued
+								td.vert-aligned= (paper.purchaseableQuantity ? paper.purchaseableQuantity : paper.quantityIssued)
+								td.vert-aligned= maturityDateString + ' (' + paper.maturity + ' days)'
+								td.vert-aligned= issuedDateString
+								td.row.col-sm-2
+										form(action="/paper/purchase/confirm", method="GET")
+											div.input-group.input-group-sm
+												input(type="hidden", name="cusip", value="#{paper.CUSIP}")
+												input(type="text", autocomplete="off", name="amount", placeholder="Quantity").form-control
+												span.input-group-btn
+													button(type="submit").btn.btn-success Buy
+		
+		include bootstrap-js.pug

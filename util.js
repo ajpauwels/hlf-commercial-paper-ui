@@ -13,9 +13,37 @@ util.COMPOSER_REST_ERROR_TYPES = {
 	OTHER: 2
 };
 
-util.getCompanyNameFromFullyQualifiedName = function(fqn) {
+util.getEntityNameFromFullyQualifiedName = function(fqn) {
 	var chunks = fqn.split('#');
 	return chunks[chunks.length - 1];
+}
+
+util.mergeOwnershipsAndPapers = function(requestingCompany, paperMap, ownershipArray) {
+	ownershipArray.forEach((ownership) => {
+		var cusip = util.getEntityNameFromFullyQualifiedName(ownership.paper);
+		var owner = util.getEntityNameFromFullyQualifiedName(ownership.owner);
+		var paper = paperMap[cusip];
+
+		if (!paper.purchaseableQuantity) {
+			paper.purchaseableQuantity = paper.quantityIssued;
+		}
+
+		if (!paper.ownerships) {
+			paper.ownerships = [];
+		}
+
+		paper.ownerships.push(ownership);
+
+		if (requestingCompany == owner) {
+			paper.purchaseableQuantity -= ownership.quantity;
+		} else {
+			paper.purchaseableQuantity -= (ownership.quantity - ownership.quantityForSale);
+		}
+
+		if (paper.purchaseableQuantity == 0) {
+			paperMap[cusip] = null;
+		}
+	});
 }
 
 
@@ -49,16 +77,54 @@ util.findIdentityByID = function(id, identities) {
 	return identity;
 }
 
-util.filterPapersByIssuer = function(papers, companyName) {
+/**
+ * Filters papers based on the issuer. If the exclude param is true,
+ * papers by the specified issuer will be excluded from the final array;
+ * otherwise, they will be included and all others excluded. Defaults
+ * to false if the param is not included.
+ */
+util.filterPapersByIssuer = function(papers, companyName, exclude) {
+	if (papers.length == 0) {
+		return [];
+	}
+
+	if (!exclude) {
+		exclude = false;
+	}
 	var filtered = [];
 
 	papers.forEach((paper) => {
 		if (paper.issuer == 'resource:fabric.ibm.commercialpaper.Company#' + companyName) {
-			filtered.push(paper);
+			if (!exclude) {
+				filtered.push(paper);
+			}
+		} else {
+			if (exclude) {
+				filtered.push(paper);
+			}
 		}
 	});
 
 	return filtered;
+}
+
+util.paperArrayToMap = function(paperArray) {
+	var paperMap = {};
+	paperArray.forEach((paper) => {
+		paperMap[paper.CUSIP] = paper;
+	});
+
+	return paperMap;
+}
+
+util.paperMapToArray = function(paperMap) {
+	var paperArray = [];
+
+	Object.keys(paperMap).forEach((key) => {
+		paperArray.push(paperMap[key]);
+	});
+
+	return paperArray;
 }
 
 module.exports = util;

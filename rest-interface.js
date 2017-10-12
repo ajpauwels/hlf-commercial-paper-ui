@@ -6,6 +6,66 @@ restServer.setServerConfig = function(config) {
 	restServer.serverConfig = config;
 }
 
+restServer.getAllPurchaseablePaper = function(requestingCompany, cb) {
+	restServer.getAllIssuedPapers((getIssuedRes, getIssuedErr) => {
+		if (getIssuedErr) {
+			return cb(getIssuedRes, getIssuedErr);
+		}
+
+		restServer.getAllPaperOwnerships((getOwnedRes, getOwnedErr) => {
+			if (getOwnedErr) {
+				return cb(getOwnedRes, getOwnedErr);
+			}
+
+			var filteredPapers = util.filterPapersByIssuer(getIssuedRes, requestingCompany, true);
+			if (filteredPapers.length == 0) {
+				return cb(filteredPapers, getOwnedErr);
+			}
+
+			var paperMap = util.paperArrayToMap(filteredPapers);
+			util.mergeOwnershipsAndPapers(requestingCompany, paperMap, getOwnedRes);
+			var purchaseablePapers = util.paperMapToArray(paperMap);
+			cb(purchaseablePapers, getOwnedErr);
+		});
+	});
+}
+
+restServer.getAllPaperOwnerships = function(cb) {
+	var reqOptions = {
+		host: restServer.serverConfig.host,
+		port: restServer.serverConfig.port,
+		path: '/api/PaperOwnership?access_token=' + restServer.serverConfig.token,
+		method: 'GET',
+	};
+
+	var req = http.request(reqOptions, (res) => {
+		var data = '';
+		res.setEncoding('utf8');
+
+		res.on('data', (chunk) => {
+			data += chunk;
+		});
+
+		res.on('end', () => {
+			var dataObj = null;
+
+			if (data.length > 0) {
+				dataObj = JSON.parse(data);
+			}
+
+			var error = restServer.handleErrors(req, dataObj, null);
+			cb(dataObj, error);
+		});
+	});
+
+	req.on('error', (err) => {
+		var error = restServer.handleErrors(req, null, err);
+		cb(null, error);
+	});
+
+	req.end();
+}
+
 restServer.issueNewPaper = function(par, quantity, discount, maturity, issuingCompanyName, cb) {
 	var postParams = JSON.stringify({
 		CUSIP: '000000',
@@ -14,6 +74,7 @@ restServer.issueNewPaper = function(par, quantity, discount, maturity, issuingCo
 		discount: discount,
 		maturity: maturity,
 		issuer: 'resource:fabric.ibm.commercialpaper.Company#' + issuingCompanyName,
+
 		issuedTimestamp: new Date()
 	});
 
@@ -44,12 +105,14 @@ restServer.issueNewPaper = function(par, quantity, discount, maturity, issuingCo
 				dataObj = JSON.parse(data);
 			}
 
-			cb(req, dataObj, null);
+			var error = restServer.handleErrors(req, dataObj, null);
+			cb(dataObj, error);
 		});
 	});
 
 	req.on('error', (err) => {
-		cb(req, null, err);
+		var error = restServer.handleErrors(req, null, err);
+		cb(null, error);
 	});
 
 	req.write(postParams);
@@ -74,17 +137,19 @@ restServer.setDefaultIdentity = function(walletID, userID, cb) {
 		});
 		
 		res.on('end', () => {
-			var dataObj = {};
+			var dataObj = null;
 			if (data.length > 0) {
 				dataObj = JSON.parse(data);
 			}
 
-			cb(req, dataObj, null);
+			var error = restServer.handleErrors(req, dataObj, null);
+			cb(dataObj, error);
 		});
 	});
 
 	req.on('error', (err) => {
-		cb(req, null, err);
+		var error = restServer.handleErrors(req, null, err);
+		cb(null, error);
 	});
 	
 	req.end();
@@ -108,13 +173,20 @@ restServer.getWallets = function(cb) {
 		});
 
 		res.on('end', () => {
-			var dataObj = JSON.parse(data);
-			cb(req, dataObj, null);
+			var dataObj = null;
+
+			if (data.length > 0) {
+				dataObj = JSON.parse(data);
+			}
+
+			var error = restServer.handleErrors(req, dataObj, null);
+			cb(dataObj, error);
 		});		
 	});
 
 	req.on('error', (err) => {
-		cb(req, null, err);
+		var error = restServer.handleErrors(req, null, err);
+		cb(null, error);
 	});
 
 	req.end();
@@ -138,13 +210,20 @@ restServer.getIdentitiesInWallet = function(walletID, cb) {
 		});
 
 		res.on('end', () => {
-			var dataObj = JSON.parse(data);
-			cb(req, dataObj, null);
+			var dataObj = null;
+
+			if (data.length > 0) {
+				dataObj = JSON.parse(data);
+			}
+
+			var error = restServer.handleErrors(req, dataObj, null);
+			cb(dataObj, error);
 		});
 	});
 
 	req.on('error', (err) => {
-		cb(req, null, err);
+		var error = restServer.handleErrors(req, null, err);
+		cb(null, error);
 	});
 
 	req.end();
@@ -166,14 +245,21 @@ restServer.getAllIdentities = function(cb) {
 		});
 
 		res.on('end', () => {
-			var dataObj = JSON.parse(data);
+			var dataObj = null;
 
-			cb(req, dataObj, null);
+			if (data.length > 0) {
+				dataObj = JSON.parse(data);
+			}
+
+
+			var error = restServer.handleErrors(req, dataObj, null);
+			cb(dataObj, error);
 		});
 	});
 
 	req.on('error', (err) => {
-		cb(req, null, err);
+		var error = restServer.handleErrors(req, null, err);
+		cb(null, error);
 	});
 
 	req.end();
@@ -201,12 +287,14 @@ restServer.getAllIssuedPapers = function(cb) {
 				dataObj = JSON.parse(data);
 			}
 
-			cb(req, dataObj, null);
+			var error = restServer.handleErrors(req, dataObj, null);
+			cb(dataObj, error);
 		});
 	});
 
 	req.on('error', (err) => {
-		cb(req, null, err);
+		var error = restServer.handleErrors(req, null, err);
+		cb(null, error);
 	});
 
 	req.end();
@@ -216,7 +304,7 @@ restServer.handleErrors = function(req, res, httpErr) {
 	var error = {};
 
 	if (httpErr) {
-		var httpErrMsg = "Could not " + req.method + " to " + req.originalURL + " due to: " + httpErr.toString();
+		var httpErrMsg = "Could not " + req.method + " to " + req.host + ":" + req.port + req.path + " due to: " + httpErr.toString();
 
 		error.type = util.ERROR_TYPES.COMPOSER_REST_HTTP_ERROR;
 		error.msg = httpErrMsg;
@@ -224,7 +312,7 @@ restServer.handleErrors = function(req, res, httpErr) {
 		return error;
 	}
 
-	if (res.error) {
+	if (res && res.error) {
 		var restErrMsg = "Could not " + req.method + " to " + req.originalURL + " due to: " + res.error.message;
 
 		error.type = util.ERROR_TYPES.COMPOSER_REST_ERROR;
@@ -244,6 +332,5 @@ restServer.handleErrors = function(req, res, httpErr) {
 
 	return null;
 }
-
 
 module.exports = restServer;

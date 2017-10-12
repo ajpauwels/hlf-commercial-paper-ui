@@ -54,28 +54,24 @@ app.use((req, res, next) => {
 app.use('/paper', paperRoutes);
 
 app.get('/', (req, res, next) => {
-	rest.getWallets((getWalletsReq, getWalletsRes, getWalletsErr) => {
-		var error = rest.handleErrors(getWalletsReq, getWalletsRes, getWalletsErr);
-
-		if (error) {
-			error.renderPage = 'login';
-			error.renderPageData = {
+	rest.getWallets((getWalletsRes, getWalletsErr) => {
+		if (getWalletsErr) {
+			getWalletsErr.renderPage = 'login';
+			getWalletsErr.renderPageData = {
 				loginLink: loginURL
 			};
-			return next(error);
+			return next(getWalletsErr);
 		}
 
 		var userWallet = getWalletsRes[0];
 
-		rest.getIdentitiesInWallet(userWallet.id, (getWalletIDsReq, getWalletIDsRes, getWalletIDsErr) => {
-			var error = rest.handleErrors(getWalletIDsReq, getWalletIDsRes, getWalletIDsErr);
-
-			if (error) {
-				error.renderPage = 'login';
-				error.renderPageData = {
+		rest.getIdentitiesInWallet(userWallet.id, (getWalletIDsRes, getWalletIDsErr) => {
+			if (getWalletIDsErr) {
+				getWalletIDsErr.renderPage = 'login';
+				getWalletIDsErr.renderPageData = {
 					loginLink: loginURL
 				};
-				return next(error);
+				return next(getWalletIDsErr);
 			}
 
 
@@ -110,27 +106,23 @@ app.get('/logout', (req, res) => {
 
 
 app.post('/select/identity', (req, res) => {
-	rest.setDefaultIdentity(req.body['identity-wallet'], req.body['identity-id'], (setDefaultReq, setDefaultRes, setDefaultErr) => {
-		var error = rest.handleErrors(setDefaultReq, setDefaultRes, setDefaultErr);
-
-		if (error) {
-			error.renderPage = 'identity-selection';
-			return next(error);
+	rest.setDefaultIdentity(req.body['identity-wallet'], req.body['identity-id'], (setDefaultRes, setDefaultErr) => {
+		if (setDefaultErr) {
+			setDefaultErr.renderPage = 'identity-selection';
+			return next(setDefaultErr);
 		}
 
 		var defaultIdentity = util.findIdentityByID(req.body['identity-id'], req.session.identities);
 		req.session.defaultIdentity = defaultIdentity;
 
-		rest.getAllIdentities((getIDsReq, getIDsRes, getIDsErr) => {
-			var error = rest.handleErrors(getIDsReq, getIDsRes, getIDsErr);
-
-			if (error) {
-				error.renderPage = 'identity-selection';
-				return next(error);
+		rest.getAllIdentities((getIDsRes, getIDsErr) => {
+			if (getIDsErr) {
+				getIDsErr.renderPage = 'identity-selection';
+				return next(getIDsErr);
 			}
 
 			var systemID = util.findIdentityByName(defaultIdentity.username, getIDsRes);
-			req.session.defaultIdentity.company = util.getCompanyNameFromFullyQualifiedName(systemID.participant);
+			req.session.defaultIdentity.company = util.getEntityNameFromFullyQualifiedName(systemID.participant);
 
 			res.redirect('/paper');
 		});
