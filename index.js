@@ -181,12 +181,17 @@ app.use((err, req, res, next) => {
 			err.renderPageData.errors = [
 				{ msg: "Must select an identity to authenticate action" }
 			];
+
+			if (!req.session.identities || req.session.identities.length == 0) {
+				return res.redirect('/');
+			}
+
 			err.renderPageData.identities = req.session.identities;
 			return res.render('identity-selection', err.renderPageData);
 		}
 		// All other errors should render the given page with an error pop-up
 		else {
-			err.renderPageData.error = [ { msg: err.msg } ];
+			err.renderPageData.errors = [ { msg: err.msg } ];
 			
 			if (!err.renderPage) {
 				err.renderPage = 'login';

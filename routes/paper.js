@@ -24,14 +24,46 @@ router.get('/', checkIdentitySelected, (req, res, next) => {
 	rest.getAllIssuedPapers((getPapersRes, getPapersErr) => {
 		if (getPapersErr) {
 			getPapersErr.renderPage = 'manage-paper';
-			getpapersErr.renderPageData = {
-				identities: req.session.identities
-			};
-			return next(getPapersErr);
+			if (getPapersErr.type == util.ERROR_TYPES.COMPOSER_REST_ERROR && getPapersErr.subtype == util.COMPOSER_REST_ERROR_TYPES.AUTH) {
+				return next(getPapersErr);
+			}
+			else if (getPapersErr.type == util.ERROR_TYPES.COMPOSER_REST_ERROR && getPapersErr.subtype == util.COMPOSER_REST_ERROR_TYPES.ENROLL) {
+				return next(getPapersErr);
+			}
 		}
 
-		var issuedPapers = util.filterPapersByIssuer(getPapersRes, req.session.defaultIdentity.company);
-		res.render('manage-paper', { issuedPapers: issuedPapers });
+		rest.getAllPaperOwnerships((ownershipsRes, ownershipsErr) => {
+			if (ownershipsErr) {
+				ownershipsErr.renderPage = 'manage-paper';
+				if (ownershipsErr.type == util.ERROR_TYPES.COMPOSER_REST_ERROR && ownershipsErr.subtype == util.COMPOSER_REST_ERROR_TYPES.AUTH) {
+					return next(ownershipsErr);
+				}
+				else if (ownershipsErr.type == util.ERROR_TYPES.COMPOSER_REST_ERROR && ownershipsErr.subtype == util.COMPOSER_REST_ERROR_TYPES.ENROLL) {
+					return next(ownershipsErr);
+				}
+			}
+
+			if (getPapersErr && ownershipsErr) {
+				ownershipsErr.msgs = ownershipsErr.msgs.concat(getPapersErr.msgs);
+				return next(ownershipsErr);
+			}
+
+			if (getPapersErr) {
+				return next(getPapersErr);
+			}
+
+			var issuedPapers = util.filterPapersByIssuer(getPapersRes, req.session.defaultIdentity.company);
+
+			if (ownershipsErr) {
+				ownershipsErr.renderPageData = { issuedPapers: issuedPapers };
+				return next(ownershipsErr);
+			}
+
+			var userOwnerships = util.filterOwnershipsByOwner(ownershipsRes, req.session.defaultIdentity.company);
+			var paperMap = util.paperArrayToMap(getPapersRes);
+			util.attachPapersToOwnerships(ownershipsRes, paperMap);
+			res.render('manage-paper', { issuedPapers: issuedPapers, ownerships: ownershipsRes, getEntityNameFromFullyQualifiedName: util.getEntityNameFromFullyQualifiedName });
+		});
 	});
 });
 		
@@ -76,7 +108,40 @@ router.get('/purchase', checkIdentitySelected, (req, res, next) => {
 			return next(getPapersErr);
 		}
 
-		res.render('purchase-paper', { availablePapers: getPapersRes });
+		res.render('purchase-paper', { availablePapers: getPapersRes, getEntityNameFromFullyQualifiedName: util.getEntityNameFromFullyQualifiedName });
+	});
+});
+
+router.get('/purchase/confirm', checkIdentitySelected, (req, res, next) => {
+	res.render('purchase-paper-confirmation', { purchaseParams: req.query });
+});
+
+router.post('/purchase', checkIdentitySelected, (req, res, next) => {
+	var quantity = parseInt(req.body.quantity);
+	var cusip = req.body.cusip;
+
+	var error = {
+		type: util.ERROR_TYPES.VALIDATION_ERROR,
+		renderPage: 'purchase-paper-confirmation',
+		renderPageData: { purchaseParams: req.body },
+		msgs: []
+	};
+
+	if (isNaN(quantity) || quantity == 0) { error.msgs.push({ msg: 'Quantity must be a non-zero positive number' }); }
+	if (cusip.length != 9) { error.msgs.push({ msg: 'Invalid CUSIP' }); }
+
+	if (error.msgs.length > 0) {
+		return next(error)
+	}
+
+	rest.purchasePaper(req.session.defaultIdentity.company, cusip, quantity, (purchaseRes, purchaseErr) => {
+		if (purchaseErr) {
+			purchaseErr.renderPage = 'purchase-paper-confirmation';
+			purchaseErr.renderPageData = { purchaseParams: req.body };
+			return next(purchaseErr);
+		}
+
+		res.redirect('/paper');
 	});
 });
 

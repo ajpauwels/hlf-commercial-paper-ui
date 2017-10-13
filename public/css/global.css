@@ -26,3 +26,7 @@ h1.content-header {
 .table tbody > tr > td.vert-aligned {
 	vertical-align: middle;
 }
+
+.bold-text {
+	font-weight: bold;
+}

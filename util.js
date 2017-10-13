@@ -46,7 +46,6 @@ util.mergeOwnershipsAndPapers = function(requestingCompany, paperMap, ownershipA
 	});
 }
 
-
 util.findIdentityByName = function(name, identities) {
 	var identity = null;
 
@@ -77,6 +76,45 @@ util.findIdentityByID = function(id, identities) {
 	return identity;
 }
 
+util.filterOwnershipsByOwner = function(ownerships, owner, exclude) {
+	var filteredOwnerships = [];
+
+	if (!ownerships || ownerships.length == 0) {
+		return filteredOwnerships;
+	}
+
+	if (exclude == null) {
+		exclude = false;
+	}	
+
+	ownerships.forEach((ownership) => {
+		var simpleOwner = util.getEntityNameFromFullyQualifiedName(ownership.owner);
+
+		if (simpleOwner == owner) {
+			if (!exclude) {
+				filteredOwnerships.push(ownership);
+			}
+		} else {
+			if (exclude) {
+				filteredOwnerships.push(ownership);
+			}
+		}
+	});
+
+	return filteredOwnerships;
+}
+
+util.attachPapersToOwnerships = function(ownerships, papers) {
+	ownerships.forEach((ownership) => {
+		var cusip = util.getEntityNameFromFullyQualifiedName(ownership.paper);
+		var paper = papers[cusip];
+
+		if (paper) {
+			ownership.paperObject = paper;
+		}
+	});
+}
+
 /**
  * Filters papers based on the issuer. If the exclude param is true,
  * papers by the specified issuer will be excluded from the final array;
@@ -84,14 +122,15 @@ util.findIdentityByID = function(id, identities) {
  * to false if the param is not included.
  */
 util.filterPapersByIssuer = function(papers, companyName, exclude) {
-	if (papers.length == 0) {
-		return [];
+	var filtered = [];
+
+	if (!papers || papers.length == 0) {
+		return filtered;
 	}
 
-	if (!exclude) {
+	if (exclude == null) {
 		exclude = false;
 	}
-	var filtered = [];
 
 	papers.forEach((paper) => {
 		if (paper.issuer == 'resource:fabric.ibm.commercialpaper.Company#' + companyName) {
@@ -121,7 +160,9 @@ util.paperMapToArray = function(paperMap) {
 	var paperArray = [];
 
 	Object.keys(paperMap).forEach((key) => {
-		paperArray.push(paperMap[key]);
+		if (paperMap[key]) {
+			paperArray.push(paperMap[key]);
+		}
 	});
 
 	return paperArray;

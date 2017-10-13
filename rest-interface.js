@@ -66,6 +66,55 @@ restServer.getAllPaperOwnerships = function(cb) {
 	req.end();
 }
 
+restServer.purchasePaper = function(requestingCompany, cusip, quantity, cb) {
+	var postParams = JSON.stringify({
+		paper: 'resource:fabric.ibm.commercialpaper.CommercialPaper#' + cusip,
+		buyer: 'resource:fabric.ibm.commercialpaper.Company#' + requestingCompany,
+		quantity: quantity,
+		quantityForSale: 0,
+		timestamp: new Date()
+	});
+
+	var reqOptions = {
+		host: restServer.serverConfig.host,
+		port: restServer.serverConfig.port,
+		path: '/api/PurchasePaper?access_token=' + restServer.serverConfig.token,
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'Content-Length': Buffer.byteLength(postParams)
+		}
+	};
+
+	var req = http.request(reqOptions, (res) => {
+		var data = '';
+		res.setEncoding('utf8');
+
+		res.on('data', (chunk) => {
+			data += chunk;
+		});
+
+		res.on('end', () => {
+			var dataObj = null;
+
+			if (data.length > 0) {
+				dataObj = JSON.parse(data);
+			}
+
+			var error = restServer.handleErrors(req, dataObj, null);
+			cb(dataObj, error);
+		});
+	});
+
+	req.on('error', (err) => {
+		var error = restServer.handleErrors(req, null, err);
+		cb(null, error);
+	});
+
+	req.write(postParams);
+	req.end();
+}
+
 restServer.issueNewPaper = function(par, quantity, discount, maturity, issuingCompanyName, cb) {
 	var postParams = JSON.stringify({
 		CUSIP: '000000',
@@ -313,14 +362,14 @@ restServer.handleErrors = function(req, res, httpErr) {
 	}
 
 	if (res && res.error) {
-		var restErrMsg = "Could not " + req.method + " to " + req.originalURL + " due to: " + res.error.message;
+		var restErrMsg = res.error.message;
 
 		error.type = util.ERROR_TYPES.COMPOSER_REST_ERROR;
 
 		if (res.error.statusCode == 401) {
 			error.subtype = util.COMPOSER_REST_ERROR_TYPES.AUTH;
 		}
-		else if (res.error.statusCode == 500) {
+		else if (res.error.statusCode == 500 && res.error.messae == "No enrollment ID or enrollment secret has been provided") {
 			error.subtype = util.COMPOSER_REST_ERROR_TYPES.ENROLL;
 		} else {
 			error.subtype = util.COMPOSER_REST_ERROR_TYPES.OTHER;

@@ -18,15 +18,16 @@ html
 				table.table.table-striped.table-hover
 					thead
 						th CUSIP
+						th Issued by
 						th Par
 						th Discount
 						th Cost per
 						th Issued
 						th Available
 						th Maturity
-						th Issued On
+						th Issued on
 						th 
-					if availablePapers.length > 0
+					if availablePapers && availablePapers.length > 0
 						tbody
 						each paper in availablePapers
 							- var issuedDate = new Date(paper.issuedTimestamp)
@@ -34,8 +35,10 @@ html
 							- var maturityDate = new Date()
 							- maturityDate.setDate(issuedDate.getDate() + paper.maturity)
 							- var maturityDateString = maturityDate.toDateString();
+							- var simpleIssuerName = getEntityNameFromFullyQualifiedName(paper.issuer)
 							tr
 								td.vert-aligned= paper.CUSIP
+								td.vert-aligned= simpleIssuerName
 								td.vert-aligned= '$' + paper.par
 								td.vert-aligned= (paper.discount * 100) + '%'
 								td.vert-aligned= '$' + (paper.par * (1 - paper.discount))
@@ -46,8 +49,12 @@ html
 								td.row.col-sm-2
 										form(action="/paper/purchase/confirm", method="GET")
 											div.input-group.input-group-sm
-												input(type="hidden", name="cusip", value="#{paper.CUSIP}")
-												input(type="text", autocomplete="off", name="amount", placeholder="Quantity").form-control
+												input(type="hidden", name="cusip", value=paper.CUSIP)
+												input(type="hidden", name="par", value=paper.par)
+												input(type="hidden", name="discount", value=paper.discount)
+												input(type="hidden", name="maturity", value=maturityDate)
+												input(type="hidden", name="issuer", value=simpleIssuerName)
+												input(type="text", autocomplete="off", name="quantity", placeholder="Quantity").form-control
 												span.input-group-btn
 													button(type="submit").btn.btn-success Buy
 		

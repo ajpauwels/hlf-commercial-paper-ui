@@ -22,10 +22,10 @@ html
 						th CUSIP
 						th Par
 						th Discount
-						th #
+						th Quantity
 						th Maturity
 						th Issued
-					if issuedPapers.length > 0
+					if issuedPapers && issuedPapers.length > 0
 						tbody
 						each paper in issuedPapers
 							- var issuedDate = new Date(paper.issuedTimestamp)
@@ -35,8 +35,8 @@ html
 							- var maturityDateString = maturityDate.toDateString();
 							tr
 								td= paper.CUSIP
-								td= paper.par
-								td= paper.discount
+								td= '$' + paper.par.toFixed(2)
+								td= (paper.discount * 100).toFixed(2) + '%'
 								td= paper.quantityIssued
 								td= maturityDateString + ' (' + paper.maturity + ' days)'
 								td= issuedDateString
@@ -51,10 +51,28 @@ html
 				table.table.table-striped.table-hover
 					thead
 						th CUSIP
+						th Issued by
 						th Par
 						th Discount
-						th #
+						th Owned
+						th Selling
 						th Maturity
-						th Issued
+					if ownerships && ownerships.length > 0
+						tbody
+						each ownership in ownerships
+							- var paper = ownership.paperObject
+							- var issuedDate = new Date(paper.issuedTimestamp)
+							- var issuedDateString = issuedDate.toDateString()
+							- var maturityDate = new Date()
+							- maturityDate.setDate(issuedDate.getDate() + paper.maturity)
+							- var maturityDateString = maturityDate.toDateString();
+							tr
+								td= paper.CUSIP
+								td= getEntityNameFromFullyQualifiedName(paper.issuer)
+								td= '$' + paper.par.toFixed(2)
+								td= (paper.discount * 100).toFixed(2) + '%'
+								td= ownership.quantity
+								td= ownership.quantityForSale
+								td= maturityDateString
 		
 		include bootstrap-js.pug
