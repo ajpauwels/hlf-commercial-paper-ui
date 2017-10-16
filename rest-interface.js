@@ -6,6 +6,52 @@ restServer.setServerConfig = function(config) {
 	restServer.serverConfig = config;
 }
 
+restServer.sellPaper = function(company, cusip, quantity, cb) {
+	var postParams = JSON.stringify({
+		ownership: 'resource:fabric.ibm.commercialpaper.PaperOwnership#' + company + ',' + cusip,
+		quantityToSell: quantity
+	});
+
+	var reqOptions = {
+		host: restServer.serverConfig.host,
+		port: restServer.serverConfig.port,
+		path: '/api/SellPaper?access_token=' + restServer.serverConfig.token,
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'Content-Length': Buffer.byteLength(postParams)
+		}
+	};
+
+	var req = http.request(reqOptions, (res) => {
+		var data = '';
+		res.setEncoding('utf8');
+
+		res.on('data', (chunk) => {
+			data += chunk;
+		});
+
+		res.on('end', () => {
+			var dataObj = null;
+
+			if (data.length > 0) {
+				dataObj = JSON.parse(data);
+			}
+
+			var error = restServer.handleErrors(req, dataObj, null);
+			cb(dataObj, error);
+		});
+	});
+
+	req.on('error', (err) => {
+		var error = restServer.handleErrors(req, null, err);
+		cb(null, error);
+	});
+
+	req.write(postParams);
+	req.end();
+}
+
 restServer.getAllPurchaseablePaper = function(requestingCompany, cb) {
 	restServer.getAllIssuedPapers((getIssuedRes, getIssuedErr) => {
 		if (getIssuedErr) {

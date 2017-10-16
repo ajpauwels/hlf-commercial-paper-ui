@@ -61,8 +61,8 @@ router.get('/', checkIdentitySelected, (req, res, next) => {
 
 			var userOwnerships = util.filterOwnershipsByOwner(ownershipsRes, req.session.defaultIdentity.company);
 			var paperMap = util.paperArrayToMap(getPapersRes);
-			util.attachPapersToOwnerships(ownershipsRes, paperMap);
-			res.render('manage-paper', { issuedPapers: issuedPapers, ownerships: ownershipsRes, getEntityNameFromFullyQualifiedName: util.getEntityNameFromFullyQualifiedName });
+			util.attachPapersToOwnerships(userOwnerships, paperMap);
+			res.render('manage-paper', { issuedPapers: issuedPapers, ownerships: userOwnerships, getEntityNameFromFullyQualifiedName: util.getEntityNameFromFullyQualifiedName });
 		});
 	});
 });
@@ -139,6 +139,33 @@ router.post('/purchase', checkIdentitySelected, (req, res, next) => {
 			purchaseErr.renderPage = 'purchase-paper-confirmation';
 			purchaseErr.renderPageData = { purchaseParams: req.body };
 			return next(purchaseErr);
+		}
+
+		res.redirect('/paper');
+	});
+});
+
+router.post('/sell', checkIdentitySelected, (req, res, next) => {
+	var quantity = parseInt(req.body.quantity);
+	var cusip = req.body.cusip;
+
+	var error = {
+		type: util.ERROR_TYPES.VALIDATION_ERROR,
+		renderPage: 'manage-paper',
+		msgs: []
+	};
+
+	if (isNaN(quantity)) { error.msgs.push({ msg: 'Quantity must be a positive number less than the number of papers owned' }); }
+	if (cusip.length != 9) { error.msgs.push({ msg: 'Invalid CUSIP' }); }
+
+	if (error.msgs.length > 0) {
+		return next(error)
+	}
+
+	rest.sellPaper(req.session.defaultIdentity.company, cusip, quantity, (sellRes, sellErr) => {
+		if (sellErr) {
+			sellErr.renderPage = 'manage-paper';
+			return next(sellErr);
 		}
 
 		res.redirect('/paper');

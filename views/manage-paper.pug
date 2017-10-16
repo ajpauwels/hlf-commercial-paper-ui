@@ -67,12 +67,19 @@ html
 							- maturityDate.setDate(issuedDate.getDate() + paper.maturity)
 							- var maturityDateString = maturityDate.toDateString();
 							tr
-								td= paper.CUSIP
-								td= getEntityNameFromFullyQualifiedName(paper.issuer)
-								td= '$' + paper.par.toFixed(2)
-								td= (paper.discount * 100).toFixed(2) + '%'
-								td= ownership.quantity
-								td= ownership.quantityForSale
-								td= maturityDateString
-		
+								td.vert-aligned= paper.CUSIP
+								td.vert-aligned= getEntityNameFromFullyQualifiedName(paper.issuer)
+								td.vert-aligned= '$' + paper.par.toFixed(2)
+								td.vert-aligned= (paper.discount * 100).toFixed(2) + '%'
+								td.vert-aligned= ownership.quantity
+								td.vert-aligned= ownership.quantityForSale
+								td.vert-aligned= maturityDateString
+								td.row.col-sm-2
+										form(action="/paper/sell", method="POST")
+											div.input-group.input-group-sm
+												input(type="hidden", name="cusip", value=paper.CUSIP)
+												input(type="text", autocomplete="off", name="quantity", placeholder="Quantity").form-control
+												span.input-group-btn
+													button(type="submit").btn.btn-success Sell
+
 		include bootstrap-js.pug
