@@ -1,0 +1,59 @@
+doctype html
+html
+	head
+		title Manage paper
+		include bootstrap-css.pug
+
+	body
+		include navbar.pug
+
+		div.container
+			div.row
+				div.well.col-sm-6.col-sm-offset-3
+					form(action="/paper/purchase", method="POST").form-horizontal
+						include error-notifs.pug
+						fieldset
+							- var pricePer = purchaseParams.par * (1 - purchaseParams.discount)
+							- var totalPrice = pricePer * purchaseParams.quantity
+							legend Confirm purchase
+							div.row
+								div.col-sm-3
+									p.bold-text.pull-right.pull-right CUSIP
+								div.col-sm-9
+									p= purchaseParams.cusip
+							div.row
+								div.col-sm-3
+									p.bold-text.pull-right Issuer
+								div.col-sm-9
+									p= purchaseParams.issuer
+							div.row
+								div.col-sm-3
+									p.bold-text.pull-right Matures
+								div.col-sm-9
+									p= new Date(purchaseParams.maturity).toDateString()
+							div.row
+								div.col-sm-3
+									p.bold-text.pull-right Price per
+								div.col-sm-9
+									p= '$' + pricePer.toFixed(2)
+							div.row
+								div.col-sm-3
+									p.bold-text.pull-right Quantity
+								div.col-sm-9
+									p= purchaseParams.quantity
+							div.row
+								div.col-sm-3
+									p.bold-text.pull-right Total cost
+								div.col-sm-9
+									p= '$' + totalPrice.toFixed(2)
+							div.form-group
+								div.col-sm-offset-3.col-sm-9
+									input(type="hidden", name="cusip", value=purchaseParams.cusip)
+									input(type="hidden", name="quantity", value=purchaseParams.quantity)
+									input(type="hidden", name="issuer", value=purchaseParams.issuer)
+									input(type="hidden", name="par", value=purchaseParams.par)
+									input(type="hidden", name="discount", value=purchaseParams.discount)
+									input(type="hidden", name="maturity", value=purchaseParams.maturity)
+									button(type="submit").btn.btn-primary Purchase
+
+		include bootstrap-js.pug

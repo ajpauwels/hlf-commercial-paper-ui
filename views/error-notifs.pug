@@ -1,5 +1,12 @@
-if errors
-	each error in errors
-		div.alert.alert-dismissible.alert-danger
-			button(type="button", data-dismiss="alert").close &times;
-			p Error: #{error.msg}
+if flash
+	if flash.error
+		each error in flash.error
+			div.alert.alert-dismissible.alert-danger
+				button(type="button", data-dismiss="alert").close &times;
+				p Error: #{error}
+
+	if flash.info
+		each info in flash.info
+			div.alert.alert-dismissible.alert-info
+				button(type="button", data-dismiss="alert").close &times;
+				p Info: #{info}

@@ -1,0 +1,46 @@
+doctype html
+html
+	head
+		title Login
+		include bootstrap-css.pug
+
+	body
+		include navbar.pug
+
+		div.container
+			div.row
+				div.well.col-lg-6.col-lg-offset-3
+					form(action='/auth/local/register', method='POST').form-vertical
+						include error-notifs.pug
+						fieldset
+							legend Register
+
+							div.form-group
+								label(for="email").control-label E-mail
+								div
+									input(autocomplete="off", type="text", placeholder="E-mail", name="email").form-control#email
+
+							div.form-group
+								label(for="password").control-label Password
+								div
+									input(autocomplete="off", type="password", placeholder="Password", name="password").form-control#password
+
+							div.form-group
+								label(for="roles").control-label Roles
+								div.checkbox.roles
+									label
+										input(type="checkbox", name="roles", value="admin")
+										| Admin
+								div.checkbox.roles
+									label
+										input(type="checkbox", name="roles", value="issuer")
+										| Issuer
+								div.checkbox.roles
+									label
+										input(type="checkbox", name="roles", value="investor")
+										| Investor
+
+							div.form-group
+								div
+									button(type="submit").btn.btn-primary Register
+		include bootstrap-js.pug

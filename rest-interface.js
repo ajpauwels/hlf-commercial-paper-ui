@@ -6,16 +6,16 @@ restServer.setServerConfig = function(config) {
 	restServer.serverConfig = config;
 }
 
-restServer.sellPaper = function(company, cusip, quantity, cb) {
+restServer.sellPaper = function(company, cusip, quantity, token, cb) {
 	var postParams = JSON.stringify({
-		ownership: 'resource:fabric.ibm.commercialpaper.PaperOwnership#' + company + ',' + cusip,
+		ownership: 'resource:' + restServer.serverConfig.namespace + '.PaperOwnership#' + company + ',' + cusip,
 		quantityToSell: quantity
 	});
 
 	var reqOptions = {
 		host: restServer.serverConfig.host,
 		port: restServer.serverConfig.port,
-		path: '/api/SellPaper?access_token=' + restServer.serverConfig.token,
+		path: '/api/SellPaper?access_token=' + token,
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -52,13 +52,13 @@ restServer.sellPaper = function(company, cusip, quantity, cb) {
 	req.end();
 }
 
-restServer.getAllPurchaseablePaper = function(requestingCompany, cb) {
-	restServer.getAllIssuedPapers((getIssuedRes, getIssuedErr) => {
+restServer.getAllPurchaseablePaper = function(requestingCompany, token, cb) {
+	restServer.getAllIssuedPapers(token, (getIssuedRes, getIssuedErr) => {
 		if (getIssuedErr) {
 			return cb(getIssuedRes, getIssuedErr);
 		}
 
-		restServer.getAllPaperOwnerships((getOwnedRes, getOwnedErr) => {
+		restServer.getAllPaperOwnerships(token, (getOwnedRes, getOwnedErr) => {
 			if (getOwnedErr) {
 				return cb(getOwnedRes, getOwnedErr);
 			}
@@ -76,11 +76,11 @@ restServer.getAllPurchaseablePaper = function(requestingCompany, cb) {
 	});
 }
 
-restServer.getAllPaperOwnerships = function(cb) {
+restServer.getAllPaperOwnerships = function(token, cb) {
 	var reqOptions = {
 		host: restServer.serverConfig.host,
 		port: restServer.serverConfig.port,
-		path: '/api/PaperOwnership?access_token=' + restServer.serverConfig.token,
+		path: '/api/PaperOwnership?access_token=' + token,
 		method: 'GET',
 	};
 
@@ -112,10 +112,10 @@ restServer.getAllPaperOwnerships = function(cb) {
 	req.end();
 }
 
-restServer.purchasePaper = function(requestingCompany, cusip, quantity, cb) {
+restServer.purchasePaper = function(requestingCompany, cusip, quantity, token, cb) {
 	var postParams = JSON.stringify({
-		paper: 'resource:fabric.ibm.commercialpaper.CommercialPaper#' + cusip,
-		buyer: 'resource:fabric.ibm.commercialpaper.Company#' + requestingCompany,
+		paper: 'resource:' + restServer.serverConfig.namespace + '.CommercialPaper#' + cusip,
+		buyer: 'resource:' + restServer.serverConfig.namespace + '.Company#' + requestingCompany,
 		quantity: quantity,
 		quantityForSale: 0,
 		timestamp: new Date()
@@ -124,7 +124,7 @@ restServer.purchasePaper = function(requestingCompany, cusip, quantity, cb) {
 	var reqOptions = {
 		host: restServer.serverConfig.host,
 		port: restServer.serverConfig.port,
-		path: '/api/PurchasePaper?access_token=' + restServer.serverConfig.token,
+		path: '/api/PurchasePaper?access_token=' + token,
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -161,15 +161,14 @@ restServer.purchasePaper = function(requestingCompany, cusip, quantity, cb) {
 	req.end();
 }
 
-restServer.issueNewPaper = function(par, quantity, discount, maturity, issuingCompanyName, cb) {
+restServer.issueNewPaper = function(par, quantity, discount, maturity, issuingCompanyName, token, cb) {
 	var postParams = JSON.stringify({
 		CUSIP: '000000',
 		par: par,
 		quantityIssued: quantity,
 		discount: discount,
 		maturity: maturity,
-		issuer: 'resource:fabric.ibm.commercialpaper.Company#' + issuingCompanyName,
-
+		issuer: 'resource:' + restServer.serverConfig.namespace + '.Company#' + issuingCompanyName,
 		issuedTimestamp: new Date()
 	});
 
@@ -177,7 +176,7 @@ restServer.issueNewPaper = function(par, quantity, discount, maturity, issuingCo
 	var reqOptions = {
 		host: restServer.serverConfig.host,
 		port: restServer.serverConfig.port,
-		path: '/api/IssuePaper?access_token=' + restServer.serverConfig.token,
+		path: '/api/IssuePaper?access_token=' + token,
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -214,11 +213,11 @@ restServer.issueNewPaper = function(par, quantity, discount, maturity, issuingCo
 	req.end();
 }
 
-restServer.setDefaultIdentity = function(walletID, userID, cb) {
+restServer.setDefaultIdentity = function(walletID, userID, token, cb) {
 	var reqOptions = {
 		host: restServer.serverConfig.host,
 		port: restServer.serverConfig.port,
-		path: '/api/wallets/' + walletID + '/identities/' + userID + '/setDefault?access_token=' + restServer.serverConfig.token,
+		path: '/api/wallets/' + walletID + '/identities/' + userID + '/setDefault?access_token=' + token,
 		method: 'POST'
 	};
 
@@ -250,11 +249,11 @@ restServer.setDefaultIdentity = function(walletID, userID, cb) {
 	req.end();
 }
 
-restServer.getWallets = function(cb) {
+restServer.getWallets = function(token, cb) {
 	var reqOptions = {
 		host: restServer.serverConfig.host,
 		port: restServer.serverConfig.port,
-		path: '/api/wallets?access_token=' + restServer.serverConfig.token,
+		path: '/api/wallets?access_token=' + token,
 		method: 'GET'
 	};
 
@@ -287,11 +286,11 @@ restServer.getWallets = function(cb) {
 	req.end();
 }
 
-restServer.getIdentitiesInWallet = function(walletID, cb) {
+restServer.getIdentitiesInWallet = function(walletID, token, cb) {
 	var reqOptions = {
 		host: restServer.serverConfig.host,
 		port: restServer.serverConfig.port,
-		path: '/api/wallets/' + walletID + '/identities?access_token=' + restServer.serverConfig.token,
+		path: '/api/wallets/' + walletID + '/identities?access_token=' + token,
 		method: 'GET'
 	};
 
@@ -324,11 +323,11 @@ restServer.getIdentitiesInWallet = function(walletID, cb) {
 	req.end();
 }
 
-restServer.getAllIdentities = function(cb) {
+restServer.getAllIdentities = function(token, cb) {
 	var reqOptions = {
 		host: restServer.serverConfig.host,
 		port: restServer.serverConfig.port,
-		path: '/api/system/identities?access_token=' + restServer.serverConfig.token,
+		path: '/api/system/identities?access_token=' + token,
 		method: 'GET'
 	};
 
@@ -360,11 +359,46 @@ restServer.getAllIdentities = function(cb) {
 	req.end();
 }
 
-restServer.getAllIssuedPapers = function(cb) {
+restServer.getAllIssuedPapers = function(token, cb) {
 	var reqOptions = {
 		host: restServer.serverConfig.host,
 		port: restServer.serverConfig.port,
-		path: '/api/CommercialPaper?access_token=' + restServer.serverConfig.token,
+		path: '/api/CommercialPaper?access_token=' + token,
+		method: 'GET'
+	};
+
+	var req = http.request(reqOptions, (res) => {
+		var data = '';
+
+		res.on('data', (chunk) => {
+			data += chunk;
+		});
+
+		res.on('end', () => {
+			var dataObj = null;
+
+			if (data.length > 0) {
+				dataObj = JSON.parse(data);
+			}
+
+			var error = restServer.handleErrors(req, dataObj, null);
+			cb(dataObj, error);
+		});
+	});
+
+	req.on('error', (err) => {
+		var error = restServer.handleErrors(req, null, err);
+		cb(null, error);
+	});
+
+	req.end();
+}
+
+restServer.getCompany = function(company, token, cb) {
+	var reqOptions = {
+		host: restServer.serverConfig.host,
+		port: restServer.serverConfig.port,
+		path: '/api/Company/' + company + '?access_token=' + token,
 		method: 'GET'
 	};
 
@@ -396,33 +430,27 @@ restServer.getAllIssuedPapers = function(cb) {
 }
 
 restServer.handleErrors = function(req, res, httpErr) {
-	var error = {};
-
 	if (httpErr) {
-		var httpErrMsg = "Could not " + req.method + " to " + req.host + ":" + req.port + req.path + " due to: " + httpErr.toString();
+		var err = util.makeError(httpErr);
+		err.handler.type = util.ERROR_TYPES.COMPOSER_REST_HTTP_ERROR;
 
-		error.type = util.ERROR_TYPES.COMPOSER_REST_HTTP_ERROR;
-		error.msg = httpErrMsg;
-
-		return error;
+		return err;
 	}
 
 	if (res && res.error) {
-		var restErrMsg = res.error.message;
-
-		error.type = util.ERROR_TYPES.COMPOSER_REST_ERROR;
+		var err = util.makeError(res.error);
+		err.handler.type = util.ERROR_TYPES.COMPOSER_REST_ERROR;
 
 		if (res.error.statusCode == 401) {
-			error.subtype = util.COMPOSER_REST_ERROR_TYPES.AUTH;
+			err.handler.subtype = util.COMPOSER_REST_ERROR_TYPES.AUTH;
 		}
-		else if (res.error.statusCode == 500 && res.error.messae == "No enrollment ID or enrollment secret has been provided") {
-			error.subtype = util.COMPOSER_REST_ERROR_TYPES.ENROLL;
+		else if (res.error.statusCode == 500 && res.error.message == "No enrollment ID or enrollment secret has been provided") {
+			err.handler.subtype = util.COMPOSER_REST_ERROR_TYPES.ENROLL;
 		} else {
-			error.subtype = util.COMPOSER_REST_ERROR_TYPES.OTHER;
+			err.handler.subtype = util.COMPOSER_REST_ERROR_TYPES.OTHER;
 		}
-		error.msg = restErrMsg;
 
-		return error;
+		return err;
 	}
 
 	return null;

@@ -10,6 +10,9 @@ html
 		div.container
 			include error-notifs.pug
 
+			div.row
+				h4.balance.pull-right Balance: $#{balance.toFixed(2)}
+
 			div.row#issued-paper-header
 				h1.content-header
 					span.table-with-button-header-text Issued paper

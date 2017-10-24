@@ -3,16 +3,10 @@ var router = express.Router();
 var rest = require('../rest-interface.js');
 var util = require('../util.js');
 
-function checkIdentitySelected(req, res, next) {
-	if (!req.session.defaultIdentity) {
-		var error = {};
-		if (!rest.serverConfig.token || rest.serverConfig.token.length == 0) {
-			error.type = util.ERROR_TYPES.COMPOSER_REST_ERROR;
-			error.subtype = util.COMPOSER_REST_ERROR_TYPES.AUTH;
-		} else {
-			error.type = util.ERROR_TYPES.COMPOSER_REST_ERROR;
-			error.subtype = util.COMPOSER_REST_ERROR_TYPES.ENROLL;
-		}
+function checkLoggedIn(req, res, next) {
+	if (!req.user) {
+		var error = util.makeError();
+		error.handler.type = util.ERROR_TYPES.AUTHENTICATION_ERROR;
 
 		return next(error);
 	}
@@ -20,80 +14,87 @@ function checkIdentitySelected(req, res, next) {
 	return next();
 }
 
-router.get('/', checkIdentitySelected, (req, res, next) => {
-	rest.getAllIssuedPapers((getPapersRes, getPapersErr) => {
-		if (getPapersErr) {
-			getPapersErr.renderPage = 'manage-paper';
-			if (getPapersErr.type == util.ERROR_TYPES.COMPOSER_REST_ERROR && getPapersErr.subtype == util.COMPOSER_REST_ERROR_TYPES.AUTH) {
-				return next(getPapersErr);
-			}
-			else if (getPapersErr.type == util.ERROR_TYPES.COMPOSER_REST_ERROR && getPapersErr.subtype == util.COMPOSER_REST_ERROR_TYPES.ENROLL) {
-				return next(getPapersErr);
-			}
+router.get('/', checkLoggedIn, (req, res, next) => {
+	rest.getCompany(util.serverConfig.company, util.serverConfig.token, (getCompanyRes, getCompanyErr) => {
+		if (getCompanyErr) {
+			getCompanyErr.handler.redirect = '/login';
+
+			return next(getCompanyErr);
 		}
 
-		rest.getAllPaperOwnerships((ownershipsRes, ownershipsErr) => {
-			if (ownershipsErr) {
-				ownershipsErr.renderPage = 'manage-paper';
-				if (ownershipsErr.type == util.ERROR_TYPES.COMPOSER_REST_ERROR && ownershipsErr.subtype == util.COMPOSER_REST_ERROR_TYPES.AUTH) {
-					return next(ownershipsErr);
-				}
-				else if (ownershipsErr.type == util.ERROR_TYPES.COMPOSER_REST_ERROR && ownershipsErr.subtype == util.COMPOSER_REST_ERROR_TYPES.ENROLL) {
-					return next(ownershipsErr);
-				}
-			}
-
-			if (getPapersErr && ownershipsErr) {
-				ownershipsErr.msgs = ownershipsErr.msgs.concat(getPapersErr.msgs);
-				return next(ownershipsErr);
-			}
-
+		rest.getAllIssuedPapers(util.serverConfig.token, (getPapersRes, getPapersErr) => {
 			if (getPapersErr) {
+				getPapersErr.handler.redirect = '/login';
+
 				return next(getPapersErr);
 			}
 
-			var issuedPapers = util.filterPapersByIssuer(getPapersRes, req.session.defaultIdentity.company);
+			rest.getAllPaperOwnerships(util.serverConfig.token, (ownershipsRes, ownershipsErr) => {
+				if (ownershipsErr) {
+					ownershipsErr.handler.redirect = '/login';
 
-			if (ownershipsErr) {
-				ownershipsErr.renderPageData = { issuedPapers: issuedPapers };
-				return next(ownershipsErr);
-			}
+					return next(ownershipsErr);
+				}
 
-			var userOwnerships = util.filterOwnershipsByOwner(ownershipsRes, req.session.defaultIdentity.company);
-			var paperMap = util.paperArrayToMap(getPapersRes);
-			util.attachPapersToOwnerships(userOwnerships, paperMap);
-			res.render('manage-paper', { issuedPapers: issuedPapers, ownerships: userOwnerships, getEntityNameFromFullyQualifiedName: util.getEntityNameFromFullyQualifiedName });
+				var issuedPapers = util.filterPapersByIssuer(getPapersRes, util.serverConfig.company);
+				var userOwnerships = util.filterOwnershipsByOwner(ownershipsRes, util.serverConfig.company);
+				var paperMap = util.paperArrayToMap(getPapersRes);
+				util.attachPapersToOwnerships(userOwnerships, paperMap);
+				res.render('manage-paper', {	flash: util.getFlash(req),
+												balance: getCompanyRes.balance,
+												issuedPapers: issuedPapers,
+												ownerships: userOwnerships,
+												getEntityNameFromFullyQualifiedName: util.getEntityNameFromFullyQualifiedName });
+			});
 		});
 	});
 });
 		
-router.get('/issue', checkIdentitySelected, (req, res, next) => {
-	res.render('issue-paper');
+router.get('/issue', checkLoggedIn, (req, res, next) => {
+	if (req.user.is('issuer') || req.user.is('admin')) {
+		res.render('issue-paper', { flash: util.getFlash(req) });
+	} else {
+		var err = util.makeError();
+		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
+		err.handler.redirect = '/paper';
+
+		return next(err);
+	}
 });
 
-router.post('/issue', checkIdentitySelected, (req, res, next) => {
+router.post('/issue', checkLoggedIn, (req, res, next) => {
+	if (!req.user.is('issuer') && !req.user.is('admin')) {
+		var err = util.makeError();
+		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
+		err.handler.redirect = '/paper';
+
+		return next(err);
+	}
+
 	var parVal = parseFloat(req.body.par);
 	var quantVal = parseInt(req.body.quantity);
 	var discountVal = parseFloat(req.body.discount);
 	var maturityVal = parseInt(req.body.maturity);
 
-	var error = {
-		type: util.ERROR_TYPES.VALIDATION_ERROR,
-		renderPage: 'issue-paper',
-		msgs: []
-	};
-	if (isNaN(parVal)) { error.msgs.push({ msg: "Par value must be a number" }); }
-	if (isNaN(quantVal)) { error.msgs.push({ msg: "Quantity value must be a number" }); }
-	if (isNaN(discountVal)) { error.msgs.push({ msg: "Discount value must be a number" }); }
-	if (isNaN(maturityVal)) { error.msgs.push({ msg: "Maturity value must be a number" }); }
+	var err = util.makeError();
+	var errMsgs = [];
+	err.handler.type = util.ERROR_TYPES.VALIDATION_ERROR;
+	err.handler.redirect = '/paper/issue';
 
-	if (error.msgs.length > 0) {
-		return next(error);
+	if (isNaN(parVal)) { errMsgs.push("par value must be a number"); }
+	if (isNaN(quantVal)) { errMsgs.push("quantity value must be a number"); }
+	if (isNaN(discountVal)) { errMsgs.push("discount value must be a number"); }
+	if (isNaN(maturityVal)) { errMsgs.push("maturity value must be a number"); }
+
+	if (errMsgs.length > 0) {
+		err.handler.msg = errMsgs.join(', ');
+		return next(err);
 	}
 
-	rest.issueNewPaper(parVal, quantVal, discountVal, maturityVal, req.session.defaultIdentity.company, (issueRes, issueErr) => {
+	rest.issueNewPaper(parVal, quantVal, discountVal, maturityVal, util.serverConfig.company, util.serverConfig.token, (issueRes, issueErr) => {
 		if (issueErr) {
-			issueErr.renderPage = 'issue-paper';
+			issueErr.handler.redirect = '/paper/issue';
+
 			return next(issueErr);
 		}
 
@@ -101,43 +102,67 @@ router.post('/issue', checkIdentitySelected, (req, res, next) => {
 	});
 });
 
-router.get('/purchase', checkIdentitySelected, (req, res, next) => {
-	rest.getAllPurchaseablePaper(req.session.defaultIdentity.company, (getPapersRes, getPapersErr) => {
+router.get('/purchase', checkLoggedIn, (req, res, next) => {
+	if (!req.user.is('investor') && !req.user.is('admin')) {
+		var err = util.makeError();
+		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
+		err.handler.redirect = '/paper';
+
+		return next(err);
+	}
+
+	rest.getAllPurchaseablePaper(util.serverConfig.company, util.serverConfig.token, (getPapersRes, getPapersErr) => {
 		if (getPapersErr) {
-			getPapersErr.renderPage = 'purchase-paper';
+			getPapersErr.handler.redirect = '/paper/purchase';
+
 			return next(getPapersErr);
 		}
 
-		res.render('purchase-paper', { availablePapers: getPapersRes, getEntityNameFromFullyQualifiedName: util.getEntityNameFromFullyQualifiedName });
+		res.render('purchase-paper', { flash: util.getFlash(req), availablePapers: getPapersRes, getEntityNameFromFullyQualifiedName: util.getEntityNameFromFullyQualifiedName });
 	});
 });
 
-router.get('/purchase/confirm', checkIdentitySelected, (req, res, next) => {
-	res.render('purchase-paper-confirmation', { purchaseParams: req.query });
+router.get('/purchase/confirm', checkLoggedIn, (req, res, next) => {
+	if (!req.user.is('investor') && !req.user.is('admin')) {
+		var err = util.makeError();
+		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
+		err.handler.redirect = '/paper';
+
+		return next(err);
+	}
+
+	res.render('purchase-paper-confirmation', { flash: util.getFlash(req), purchaseParams: req.query });
 });
 
-router.post('/purchase', checkIdentitySelected, (req, res, next) => {
+router.post('/purchase', checkLoggedIn, (req, res, next) => {
+	if (!req.user.is('investor') && !req.user.is('admin')) {
+		var err = util.makeError();
+		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
+		err.handler.redirect = '/paper';
+
+		return next(err);
+	}
+
 	var quantity = parseInt(req.body.quantity);
 	var cusip = req.body.cusip;
 
-	var error = {
-		type: util.ERROR_TYPES.VALIDATION_ERROR,
-		renderPage: 'purchase-paper-confirmation',
-		renderPageData: { purchaseParams: req.body },
-		msgs: []
-	};
+	var err = util.makeError();
+	var errMsgs = [];
+	err.handler.type = util.ERROR_TYPES.VALIDATION_ERROR;
+	err.handler.redirect = '/paper/purchase';
 
-	if (isNaN(quantity) || quantity == 0) { error.msgs.push({ msg: 'Quantity must be a non-zero positive number' }); }
-	if (cusip.length != 9) { error.msgs.push({ msg: 'Invalid CUSIP' }); }
+	if (isNaN(quantity) || quantity == 0) { errMsgs.push('quantity must be a non-zero positive number'); }
+	if (cusip.length != 9) { errMsgs.push('invalid CUSIP'); }
 
-	if (error.msgs.length > 0) {
-		return next(error)
+	if (errMsgs.length > 0) {
+		err.handler.msg = errMsgs.join(', ');
+		return next(err)
 	}
 
-	rest.purchasePaper(req.session.defaultIdentity.company, cusip, quantity, (purchaseRes, purchaseErr) => {
+	rest.purchasePaper(util.serverConfig.company, cusip, quantity, util.serverConfig.token, (purchaseRes, purchaseErr) => {
 		if (purchaseErr) {
-			purchaseErr.renderPage = 'purchase-paper-confirmation';
-			purchaseErr.renderPageData = { purchaseParams: req.body };
+			purchaseErr.handler.redirect = '/paper/purchase';
+
 			return next(purchaseErr);
 		}
 
@@ -145,26 +170,35 @@ router.post('/purchase', checkIdentitySelected, (req, res, next) => {
 	});
 });
 
-router.post('/sell', checkIdentitySelected, (req, res, next) => {
+router.post('/sell', checkLoggedIn, (req, res, next) => {
+	if (!req.user.is('investor') && !req.user.is('admin')) {
+		var err = util.makeError();
+		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
+		err.handler.redirect = '/paper';
+
+		return next(err);
+	}
+
 	var quantity = parseInt(req.body.quantity);
 	var cusip = req.body.cusip;
 
-	var error = {
-		type: util.ERROR_TYPES.VALIDATION_ERROR,
-		renderPage: 'manage-paper',
-		msgs: []
-	};
+	var err = util.makeError();
+	var errMsgs = [];
+	err.handler.type = util.ERROR_TYPES.VALIDATION_ERROR;
+	err.handler.redirect = '/paper';
 
-	if (isNaN(quantity)) { error.msgs.push({ msg: 'Quantity must be a positive number less than the number of papers owned' }); }
-	if (cusip.length != 9) { error.msgs.push({ msg: 'Invalid CUSIP' }); }
+	if (isNaN(quantity)) { errMsgs.push('quantity must be a positive number less than the number of papers owned'); }
+	if (cusip.length != 9) { errMsgs.push('invalid CUSIP'); }
 
-	if (error.msgs.length > 0) {
-		return next(error)
+	if (errMsgs.length > 0) {
+		err.handler.msg = errMsgs.join(', ');
+		return next(err);
 	}
 
-	rest.sellPaper(req.session.defaultIdentity.company, cusip, quantity, (sellRes, sellErr) => {
+	rest.sellPaper(util.serverConfig.company, cusip, quantity, util.serverConfig.token, (sellRes, sellErr) => {
 		if (sellErr) {
-			sellErr.renderPage = 'manage-paper';
+			sellErr.handler.redirect('/paper');
+
 			return next(sellErr);
 		}
 

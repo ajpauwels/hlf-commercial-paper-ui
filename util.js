@@ -1,10 +1,18 @@
 var util = {};
 
+util.namespace = '';
+
 // Error types
 util.ERROR_TYPES = {
 	COMPOSER_REST_HTTP_ERROR: 0,
 	COMPOSER_REST_ERROR: 1,
-	VALIDATION_ERROR: 2
+	VALIDATION_ERROR: 2,
+	AUTHENTICATION_ERROR: 3,
+	USER_ALREADY_EXISTS_ERROR: 4,
+	MONGOOSE_ERROR: 5,
+	CRYPTO_ERROR: 6,
+	NOT_ALLOWED_ERROR: 7,
+	INVALID_ROLE_ERROR: 8
 };
 
 util.COMPOSER_REST_ERROR_TYPES = {
@@ -12,6 +20,71 @@ util.COMPOSER_REST_ERROR_TYPES = {
 	ENROLL: 1,
 	OTHER: 2
 };
+
+util.makeError = function(obj) {
+	var err = obj || {};
+	err.handler = {};
+
+	return err;
+}
+
+util.getFlash = function(req) {
+	var flash = req.session.flash;
+	util.clearFlash(req);
+	return flash;
+}
+
+util.clearFlash = function(req) {
+	req.session.flash = {};
+}
+
+util.flashSuccess = function(req, msg) {
+	if (!req.session.flash) {
+		req.session.flash = {};
+	}
+
+	if (!req.session.flash.success) {
+		req.session.flash.success = [];
+	}
+
+	req.session.flash.success.push(msg);
+}
+
+util.flashError = function(req, msg) {
+	if (!req.session.flash) {
+		req.session.flash = {};
+	}
+
+	if (!req.session.flash.error) {
+		req.session.flash.error = [];
+	}
+
+	req.session.flash.error.push(msg);
+}
+
+util.flashWarning = function(req, msg) {
+	if (!req.session.flash) {
+		req.session.flash = {};
+	}
+
+	if (!req.session.flash.warning) {
+		req.session.flash.warning = [];
+	}
+
+	req.session.flash.warning.push(msg);
+}
+
+util.flashInfo = function(req, msg) {
+	if (!req.session.flash) {
+		req.session.flash = {};
+	}
+
+	if (!req.session.flash.info) {
+		req.session.flash.info = [];
+	}
+
+	req.session.flash.info.push(msg);
+}
 
 util.getEntityNameFromFullyQualifiedName = function(fqn) {
 	var chunks = fqn.split('#');
@@ -23,6 +96,10 @@ util.mergeOwnershipsAndPapers = function(requestingCompany, paperMap, ownershipA
 		var cusip = util.getEntityNameFromFullyQualifiedName(ownership.paper);
 		var owner = util.getEntityNameFromFullyQualifiedName(ownership.owner);
 		var paper = paperMap[cusip];
+
+		if (!paper) {
+			return;
+		}
 
 		if (!paper.purchaseableQuantity) {
 			paper.purchaseableQuantity = paper.quantityIssued;
@@ -133,7 +210,7 @@ util.filterPapersByIssuer = function(papers, companyName, exclude) {
 	}
 
 	papers.forEach((paper) => {
-		if (paper.issuer == 'resource:fabric.ibm.commercialpaper.Company#' + companyName) {
+		if (paper.issuer == 'resource:' + util.namespace + '.Company#' + companyName) {
 			if (!exclude) {
 				filtered.push(paper);
 			}

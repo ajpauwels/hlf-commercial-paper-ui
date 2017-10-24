@@ -1,0 +1,30 @@
+doctype html
+html
+	head
+		title= title
+		include bootstrap-css.pug
+
+	body
+		include navbar.pug
+
+		div.container
+			div.row
+				div.well.col-lg-6.col-lg-offset-3
+					form(action='/token', method='POST').form-horizontal
+						include error-notifs.pug
+						fieldset
+							legend Login
+
+							p
+								| Looks like you're not logged in yet. #[a(target='_blank', href='http://localhost:3000/auth/github')#login-link Click here] to
+								| login with Github and get an access token. Once you have an access token, paste it below and hit Submit.
+
+							div.form-group
+								div.col-lg-10.col-lg-offset-1
+									input(autocomplete='off', type='text', placeholder='Token', name='token').form-control#input-token
+
+							div.form-group
+								div.col-lg-offset-1.col-lg-10
+									button(type='submit').btn.btn-primary.pull-right Submit
+
+		include bootstrap-js.pug
