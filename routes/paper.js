@@ -3,56 +3,41 @@ var router = express.Router();
 var rest = require('../rest-interface.js');
 var util = require('../util.js');
 
-function checkLoggedIn(req, res, next) {
-	if (!req.user) {
-		var error = util.makeError();
-		error.handler.type = util.ERROR_TYPES.AUTHENTICATION_ERROR;
+router.get('/', util.checkLoggedIn, (req, res, next) => {
+	rest.getAllIssuedPapers(util.serverConfig.token, (getPapersRes, getPapersErr) => {
+		if (getPapersErr) {
+			getPapersErr.handler.redirect = '/login';
 
-		return next(error);
-	}
-
-	return next();
-}
-
-router.get('/', checkLoggedIn, (req, res, next) => {
-	rest.getCompany(util.serverConfig.company, util.serverConfig.token, (getCompanyRes, getCompanyErr) => {
-		if (getCompanyErr) {
-			getCompanyErr.handler.redirect = '/login';
-
-			return next(getCompanyErr);
+			return next(getPapersErr);
 		}
 
-		rest.getAllIssuedPapers(util.serverConfig.token, (getPapersRes, getPapersErr) => {
-			if (getPapersErr) {
-				getPapersErr.handler.redirect = '/login';
+		rest.getAllPaperOwnerships(util.serverConfig.token, (ownershipsRes, ownershipsErr) => {
+			if (ownershipsErr) {
+				ownershipsErr.handler.redirect = '/login';
 
-				return next(getPapersErr);
+				return next(ownershipsErr);
 			}
 
-			rest.getAllPaperOwnerships(util.serverConfig.token, (ownershipsRes, ownershipsErr) => {
-				if (ownershipsErr) {
-					ownershipsErr.handler.redirect = '/login';
+			var issuedPapers = util.filterPapersByIssuer(getPapersRes, util.serverConfig.company);
+			var userOwnerships = util.filterOwnershipsByOwner(ownershipsRes, util.serverConfig.company);
+			var paperMap = util.paperArrayToMap(getPapersRes);
+			util.attachPapersToOwnerships(userOwnerships, paperMap);
 
-					return next(ownershipsErr);
-				}
-
-				var issuedPapers = util.filterPapersByIssuer(getPapersRes, util.serverConfig.company);
-				var userOwnerships = util.filterOwnershipsByOwner(ownershipsRes, util.serverConfig.company);
-				var paperMap = util.paperArrayToMap(getPapersRes);
-				util.attachPapersToOwnerships(userOwnerships, paperMap);
-				res.render('manage-paper', {	flash: util.getFlash(req),
-												balance: getCompanyRes.balance,
-												issuedPapers: issuedPapers,
-												ownerships: userOwnerships,
-												getEntityNameFromFullyQualifiedName: util.getEntityNameFromFullyQualifiedName });
-			});
+			util.clearGuards(req);
+			res.viewData.flash = util.getFlash(req);
+			res.viewData.issuedPapers = issuedPapers;
+			res.viewData.ownerships = userOwnerships;
+			res.viewData.getEntityNameFromFullyQualifiedName = util.getEntityNameFromFullyQualifiedName;
+			res.render('manage-paper', res.viewData);
 		});
 	});
 });
 		
-router.get('/issue', checkLoggedIn, (req, res, next) => {
+router.get('/issue', util.checkLoggedIn, (req, res, next) => {
 	if (req.user.is('issuer') || req.user.is('admin')) {
-		res.render('issue-paper', { flash: util.getFlash(req) });
+		util.clearGuards(req);
+		res.viewData.flash = util.getFlash(req);
+		res.render('issue-paper', res.viewData);
 	} else {
 		var err = util.makeError();
 		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
@@ -62,7 +47,7 @@ router.get('/issue', checkLoggedIn, (req, res, next) => {
 	}
 });
 
-router.post('/issue', checkLoggedIn, (req, res, next) => {
+router.post('/issue', util.checkLoggedIn, (req, res, next) => {
 	if (!req.user.is('issuer') && !req.user.is('admin')) {
 		var err = util.makeError();
 		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
@@ -102,7 +87,7 @@ router.post('/issue', checkLoggedIn, (req, res, next) => {
 	});
 });
 
-router.get('/purchase', checkLoggedIn, (req, res, next) => {
+router.get('/purchase', util.checkLoggedIn, (req, res, next) => {
 	if (!req.user.is('investor') && !req.user.is('admin')) {
 		var err = util.makeError();
 		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
@@ -118,11 +103,15 @@ router.get('/purchase', checkLoggedIn, (req, res, next) => {
 			return next(getPapersErr);
 		}
 
-		res.render('purchase-paper', { flash: util.getFlash(req), availablePapers: getPapersRes, getEntityNameFromFullyQualifiedName: util.getEntityNameFromFullyQualifiedName });
+		util.clearGuards(req);
+		res.viewData.flash = util.getFlash(req);
+		res.viewData.availablePapers = getPapersRes;
+		res.viewData.getEntityNameFromFullyQualifiedName = util.getEntityNameFromFullyQualifiedName;
+		res.render('purchase-paper', res.viewData);
 	});
 });
 
-router.get('/purchase/confirm', checkLoggedIn, (req, res, next) => {
+router.get('/purchase/confirm', util.checkLoggedIn, (req, res, next) => {
 	if (!req.user.is('investor') && !req.user.is('admin')) {
 		var err = util.makeError();
 		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
@@ -130,11 +119,14 @@ router.get('/purchase/confirm', checkLoggedIn, (req, res, next) => {
 
 		return next(err);
 	}
-
-	res.render('purchase-paper-confirmation', { flash: util.getFlash(req), purchaseParams: req.query });
+	
+	util.clearGuards(req);
+	res.viewData.flash = util.getFlash(req);
+	res.viewData.purchaseParams = req.query;
+	res.render('purchase-paper-confirmation', res.viewData);
 });
 
-router.post('/purchase', checkLoggedIn, (req, res, next) => {
+router.post('/purchase', util.checkLoggedIn, (req, res, next) => {
 	if (!req.user.is('investor') && !req.user.is('admin')) {
 		var err = util.makeError();
 		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;
@@ -170,7 +162,7 @@ router.post('/purchase', checkLoggedIn, (req, res, next) => {
 	});
 });
 
-router.post('/sell', checkLoggedIn, (req, res, next) => {
+router.post('/sell', util.checkLoggedIn, (req, res, next) => {
 	if (!req.user.is('investor') && !req.user.is('admin')) {
 		var err = util.makeError();
 		err.handler.type = util.ERROR_TYPES.NOT_ALLOWED_ERROR;

@@ -1,3 +1,5 @@
+include mixins
+
 doctype html
 html
 	head
@@ -9,9 +11,6 @@ html
 
 		div.container
 			include error-notifs.pug
-
-			div.row
-				h4.balance.pull-right Balance: $#{balance.toFixed(2)}
 
 			div.row#issued-paper-header
 				h1.content-header
@@ -38,7 +37,9 @@ html
 							- var maturityDateString = maturityDate.toDateString();
 							tr
 								td= paper.CUSIP
-								td= '$' + paper.par.toFixed(2)
+								td
+									| $
+									+formatNum(paper.par)
 								td= (paper.discount * 100).toFixed(2) + '%'
 								td= paper.quantityIssued
 								td= maturityDateString + ' (' + paper.maturity + ' days)'
@@ -72,7 +73,9 @@ html
 							tr
 								td.vert-aligned= paper.CUSIP
 								td.vert-aligned= getEntityNameFromFullyQualifiedName(paper.issuer)
-								td.vert-aligned= '$' + paper.par.toFixed(2)
+								td.vert-aligned
+									| $
+									+formatNum(paper.par)
 								td.vert-aligned= (paper.discount * 100).toFixed(2) + '%'
 								td.vert-aligned= ownership.quantity
 								td.vert-aligned= ownership.quantityForSale

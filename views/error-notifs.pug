@@ -1,12 +1,32 @@
 if flash
 	if flash.error
-		each error in flash.error
+		each error, i in flash.error
+			if i == 0
+				- error = error[0].toUpperCase() + error.slice(1)
 			div.alert.alert-dismissible.alert-danger
 				button(type="button", data-dismiss="alert").close &times;
 				p Error: #{error}
 
 	if flash.info
-		each info in flash.info
+		each info, i in flash.info
+			if i == 0
+				- info = info[0].toUpperCase() + info.slice(1)
 			div.alert.alert-dismissible.alert-info
 				button(type="button", data-dismiss="alert").close &times;
 				p Info: #{info}
+
+	if flash.success
+		each success, i in flash.success
+			if i == 0
+				- success = success[0].toUpperCase() + success.slice(1)
+			div.alert.alert-dismissible.alert-success
+				button(type="button", data-dismiss="alert").close &times;
+				p Success: #{success}
+
+	if flash.warning
+		each warning, i in flash.warning
+			if i == 0
+				- warning = warning[0].toUpperCase() + warning.slice(1)
+			div.alert.alert-dismissible.alert-warning
+				button(type="button", data-dismiss="alert").close &times;
+				p Warning: #{warning}

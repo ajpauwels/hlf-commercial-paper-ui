@@ -1,3 +1,5 @@
+include mixins.pug
+
 doctype html
 html
 	head
@@ -35,7 +37,9 @@ html
 								div.col-sm-3
 									p.bold-text.pull-right Price per
 								div.col-sm-9
-									p= '$' + pricePer.toFixed(2)
+									p
+										| $
+										+formatNum(pricePer)
 							div.row
 								div.col-sm-3
 									p.bold-text.pull-right Quantity
@@ -45,7 +49,9 @@ html
 								div.col-sm-3
 									p.bold-text.pull-right Total cost
 								div.col-sm-9
-									p= '$' + totalPrice.toFixed(2)
+									p
+										| $
+										+formatNum(totalPrice)
 							div.form-group
 								div.col-sm-offset-3.col-sm-9
 									input(type="hidden", name="cusip", value=purchaseParams.cusip)

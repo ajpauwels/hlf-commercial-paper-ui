@@ -21,11 +21,26 @@ util.COMPOSER_REST_ERROR_TYPES = {
 	OTHER: 2
 };
 
+util.checkLoggedIn = function(req, res, next) {
+	if (!req.user) {
+		var error = util.makeError();
+		error.handler.type = util.ERROR_TYPES.AUTHENTICATION_ERROR;
+
+		return next(error);
+	}
+
+	return next();
+}
+
 util.makeError = function(obj) {
 	var err = obj || {};
 	err.handler = {};
 
 	return err;
+}
+
+util.clearGuards = function(req) {
+	req.session.redirectGuards = {};
 }
 
 util.getFlash = function(req) {

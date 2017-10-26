@@ -1,3 +1,5 @@
+include mixins.pug
+
 nav.navbar.navbar-default.navbar-fixed-top
 	div.container
 		div.navbar-header
@@ -11,8 +13,16 @@ nav.navbar.navbar-default.navbar-fixed-top
 		div.navbar-collapse.collapse#navbar-collapse-content
 			ul.nav.navbar-nav
 				li
-					a(href="/paper") Manage
+					a(href="/paper") Paper
+				if currentUser && currentUser.roles.indexOf('admin') > -1
+					li
+						a(href="/users") Users
 
 			ul.nav.navbar-nav.navbar-right
+				if companyInfo
+					li
+						a(href="#") Balance: $
+							+formatNum(companyInfo.balance)
+						
 				li
 					a(href="/logout") Logout

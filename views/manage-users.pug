@@ -1,0 +1,54 @@
+include mixins
+
+doctype html
+html
+	head
+		title Manage paper
+		include bootstrap-css.pug
+
+	body
+		include navbar.pug
+
+		div.container
+			include error-notifs.pug
+
+			div.row#issued-paper-header
+				h1.content-header
+					span.table-with-button-header-text Users
+			div.row#issued-paper-table
+				form(action='/users/update', method='POST')
+					table.table.table-striped.table-hover
+						thead
+							th E-mail
+							th OAuth
+							th Roles
+							th
+						if users && users.length > 0
+							tbody
+								each user, i in users
+									tr
+										td.vert-aligned
+											if user.username
+												=user.username
+											else
+												| None
+										td.vert-aligned
+											if user.oauthIDs && user.oauthIDs.githubID
+												| Github: #{user.oauthIDs.githubID}
+											else
+												| None
+										td.vert-aligned.col-sm-2
+											each role in [ 'admin', 'issuer', 'investor' ]
+													div.checkbox
+														label
+															if user.roles && user.roles.indexOf(role) > -1
+																input(type="checkbox", name=user._id, value=role, checked)
+															else
+																input(type="checkbox", name=user._id, value=role)
+															| #{role}
+										td.vert-aligned.col-sm-1
+											button(type="submit", name="submit", value=user._id).btn.btn-success
+												span.glyphicon.glyphicon-refresh.button-glyphicon
+												| Update
+
+		include bootstrap-js.pug

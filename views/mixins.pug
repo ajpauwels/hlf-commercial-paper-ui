@@ -1,0 +1,7 @@
+mixin formatNum(num)
+	-
+		var splitNum = num.toFixed(2).toString().split('.');
+		var nonDec = splitNum[0];
+		nonDec = nonDec.replace(/(\d)(?=(\d\d\d)+$)/g, "$1,");
+		var finalNum = nonDec + '.' + splitNum[1];
+	span.formatted-number= finalNum
