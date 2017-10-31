@@ -8,7 +8,7 @@ nav.navbar.navbar-default.navbar-fixed-top
 				span.icon-bar
 				span.icon-bar
 				span.icon-bar
-			a.navbar-brand(href='/') Commercial Paper
+			a.navbar-brand(href='/') Commercial Paper - #{companyInfo.names}
 
 		div.navbar-collapse.collapse#navbar-collapse-content
 			ul.nav.navbar-nav
@@ -19,7 +19,7 @@ nav.navbar.navbar-default.navbar-fixed-top
 						a(href="/users") Users
 
 			ul.nav.navbar-nav.navbar-right
-				if companyInfo
+				if companyInfo && companyInfo.balance
 					li
 						a(href="#") Balance: $
 							+formatNum(companyInfo.balance)

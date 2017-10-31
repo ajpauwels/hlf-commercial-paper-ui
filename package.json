@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start-ibm": "node index.js ibm",
-    "start-pbm": "node index.js pbm",
-    "start-slurm": "node index.js slurm",
+    "start-redhat": "node index.js redhat",
+    "start-google": "node index.js google",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Alexandre Pauwels",

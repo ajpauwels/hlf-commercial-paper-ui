@@ -75,6 +75,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Custom middleware
+// Build the viewData object if it doesn't exist
 app.use((req, res, next) => {
 	if (!res.viewData) {
 		res.viewData = {};
@@ -83,8 +84,10 @@ app.use((req, res, next) => {
 	next();
 });
 
+// Retrieve company info for the UI and add it to the viewData
 app.use((req, res, next) => {
 	if (!req.user || req.originalUrl == '/logout') {
+		res.viewData.companyInfo = { name: serverConfig.company }
 		return next();
 	}
 
@@ -100,6 +103,7 @@ app.use((req, res, next) => {
 	});
 });
 
+// Place the user in viewData if logged in
 app.use((req, res, next) => {
 	if (req.user) {
 		res.viewData.currentUser = req.user;
@@ -108,11 +112,12 @@ app.use((req, res, next) => {
 	next();
 });
 
-// Routing
+// Load routing modules
 app.use('/paper', paperRoutes);
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
 
+// Root routes
 app.get('/', (req, res, next) => {
 	if (req.user) {
 		return res.redirect('/paper');
@@ -167,11 +172,13 @@ app.use((err, req, res, next) => {
 	return next(err);
 });
 
-// Log HTTP errors
+// Log errors if debug is enabled
 app.use((err, req, res, next) => {
-	if (err.handler.type == util.ERROR_TYPES.COMPOSER_REST_HTTP_ERROR) {
-		console.log("[ERROR]", err.msg);
+	if (serverConfig.debug) {
+		console.log("[ERROR]");
+		console.log(err);
 	}
+
 	return next(err);
 });
 
@@ -236,18 +243,15 @@ app.use((err, req, res, next) => {
 				redirect = '/auth/local/register';
 				break;
 		}
-	}
 
-	if (!err.handler) {
-		err = util.makeError(err);
+		err.handler.msg = err.handler.msg || msg;
+		err.handler.redirect = err.handler.redirect || redirect;
 	}
-
-	err.handler.msg = err.handler.msg || msg;
-	err.handler.redirect = err.handler.redirect || redirect;
 
 	return next(err);
 });
 
+// Set the error message flash and redirect
 app.use((err, req, res, next) => {
 	if (err.handler) {
 		util.flashError(req, err.handler.msg);
@@ -257,10 +261,21 @@ app.use((err, req, res, next) => {
 	return next(err);
 });
 
+// Handle unhandled errors
 app.use((err, req, res, next) => {
-	console.log("[ERROR]", err);
-	util.flashError(req, "A NodeJS error has occurred, check server logs");
-	return res.redirect('/logout');
+	// Let the default Pug error handler send error to the browser
+	if (err.code) {
+		if (err.code.substring(0, 3) == 'PUG') {
+			return next(err);
+		}
+	}
+
+	// If debug is enabled, send the full error to the browser
+	if (serverConfig.debug) {
+		return res.send(err.toString());
+	} else {
+		return res.send("[ERROR] A fatal error occurred");
+	}
 });
 
 // Start listening

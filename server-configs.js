@@ -1,27 +1,30 @@
 module.exports = {
 	ibm: {
-		token: 'M5S5qRHH6DT6x6srShufyW6q4LjAEX111Nt6xNlfD7YVUIBksbE30rhTurD7b65V',
+		token: '84rdR1SCFwf5gboiqAsSrKBYCtRDkC7aMMMkOT0HpuZXWqqelCI4oT6FnH4wnn96',
 		port: 4200,
 		displayName: 'IBM',
 		staticDir: 'public',
 		company: 'IBM',
-		dbURL: 'mongodb://ajp:trainisland@ds227525.mlab.com:27525/cp-ui'
+		dbURL: 'mongodb://ajp:trainisland@ds227525.mlab.com:27525/cp-ui',
+		debug: true
 	},
-	pbm: {
-		token: '8DOf9Twnb7NhIaN6Y3Ldmfylbxb00heeHilOGnTTYYyHQrbLvoaDC3rHNCWsYzyS',
+	redhat: {
+		token: 'AbxYJ8PhPE9jsTvY6YJmIPUBEMIg2x0VkqXB0s3oaWPyegZuQJKI7L6YFFCcXngt',
 		port: 4201,
-		displayName: 'PBM',
+		displayName: 'RedHat',
 		staticDir: 'public',
-		company: 'PBM',
-		dbURL: 'mongodb://ajp:trainisland@ds227525.mlab.com:27525/cp-ui'
+		company: 'RedHat',
+		dbURL: 'mongodb://ajp:trainisland@ds227525.mlab.com:27525/cp-ui',
+		debug: false
 	},
-	slurm: {
-		token: 'YT3i0wsZsTDQR3cImBmEd1o5D3kkAvqHg7ljeRJtnYEesVi2ZmXuRhLqgwWQGTCj',
+	google: {
+		token: 'B7EWZXpVGrPxFQucZNELbCQyCPCVU9SRazs27ZBgYXZAcoqjxjx94hEWSwneY55i',
 		port: 4202,
-		displayName: 'Slurm',
+		displayName: 'Google',
 		staticDir: 'public',
-		company: 'Slurm',
-		dbURL: 'mongodb://ajp:trainisland@ds227525.mlab.com:27525/cp-ui'
+		company: 'Google',
+		dbURL: 'mongodb://ajp:trainisland@ds227525.mlab.com:27525/cp-ui',
+		debug: false
 	},
 	default: {
 		token: '',
@@ -29,6 +32,7 @@ module.exports = {
 		displayName: 'Default',
 		staticDir: 'public',
 		company: 'Default',
-		dbURL: 'mongodb://ajp:trainisland@ds227525.mlab.com:27525/cp-ui'
+		dbURL: 'mongodb://ajp:trainisland@ds227525.mlab.com:27525/cp-ui',
+		debug: false
 	}
 }
